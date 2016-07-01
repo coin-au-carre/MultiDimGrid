@@ -12,6 +12,6 @@ int main() {
 	// We have a pretty printer
 	std::cout << grid << std::endl;
 	// We can access efficiently to values from appropriate coordinates
-	std::cout << "Grid[{2,0,2}] = " << grid[{2,0,2}] << std::endl;
+	std::cout << "Grid[{2,0,2}] = " << grid[{{2,0,2}}] << std::endl;
 }
 

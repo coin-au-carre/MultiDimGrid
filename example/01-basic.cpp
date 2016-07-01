@@ -20,7 +20,7 @@ int main() {
 	// and vice versa
 	std::cout << "get_index_from_coord({{2,0,2,3}}) = " << grid.get_index_from_coord({{2,0,2,3}}) << std::endl;
 	// print value at specific coordinates
-	std::cout << "Grid[{2,0,2,3}] = " << grid[{2,0,2,3}] << std::endl;
+	std::cout << "Grid[{2,0,2,3}] = " << grid[{{2,0,2,3}}] << std::endl;
 	// print value at specific index
 	std::cout << "Grid[42] = " << grid[42] << "\n\n";
 

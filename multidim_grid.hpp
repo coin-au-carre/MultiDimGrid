@@ -22,9 +22,12 @@ substantial portions of the Software.
 #include <type_traits>
 #include <utility> // std::index_sequence
 
-namespace multidim {
+namespace multidim 
+{
 
-namespace _impl_multi_grid {
+
+namespace _impl_multi_grid 
+{
 
 // meta functions
 template<typename T>
@@ -33,19 +36,49 @@ constexpr T meta_prod(T x) { return x; }
 template<typename T, typename... Ts>
 constexpr T meta_prod(T x, Ts... xs) { return x * meta_prod(xs...); }
 
+template<typename Iter, size_t D0, size_t... DIMS> struct flatten_t;
+
+template<typename Iter, size_t D0>
+struct flatten_t<Iter, D0>
+{
+	static constexpr size_t compute(Iter first, Iter, std::index_sequence<D0>) 
+	{
+		return *first;
+	}
+};
+
+
 template <typename Iter, size_t D0>
-size_t flatten(Iter first, Iter, std::index_sequence<D0> ) {
-	return *first;
+constexpr size_t flatten(Iter first, std::index_sequence<D0> seq) 
+{
+	return flatten_t<Iter, D0>::compute(first, seq);
 }
+
 
 template <typename Iter, size_t D0, size_t... DIMS>
-size_t flatten(Iter first, Iter last, std::index_sequence<D0, DIMS...> ) {
-	return *first * meta_prod(DIMS...) + 
-		flatten(std::next(first), last, std::index_sequence<DIMS...>{} );
+constexpr size_t flatten(Iter first, Iter last, std::index_sequence<D0, DIMS...> seq) 
+{
+	return flatten_t<Iter, D0, DIMS...>::compute(first, last, seq);
 }
 
+
+
+template <typename Iter, size_t D0, size_t... DIMS>
+struct flatten_t
+{
+	static constexpr size_t compute(Iter first, Iter last, std::index_sequence<D0, DIMS...>) 
+	{
+		return *first * meta_prod(DIMS...) + 
+			flatten(std::next(first), last, std::index_sequence<DIMS...>{} );
+	}
+};
+
+
+
 template<typename T, size_t... DIMS>
-class Grid {
+class Grid 
+{
+
 public:
 	static constexpr size_t num_dims = sizeof...(DIMS);
 	static_assert(num_dims > 0, "Grid dimension needs to be > 0");
@@ -93,11 +126,13 @@ public:
 	reference       operator[] (size_type idx)       { return values_[idx]; };
 	const_reference operator[] (size_type idx) const { return values_[idx]; };
  
-	reference operator[] (const ArrayCoord& coord) { 
+	reference operator[] (const ArrayCoord& coord) 
+	{ 
 		return values_[flatten(
 			coord.begin(), coord.end(), std::index_sequence<DIMS...>{})];
 	}
-	const_reference operator[] (const ArrayCoord& coord) const { 
+	const_reference operator[] (const ArrayCoord& coord) const 
+	{ 
 		return const_cast<reference>(static_cast<const Grid&>(*this)[coord]); 
 	};
 
@@ -109,17 +144,19 @@ public:
 	// 	return const_cast<reference>(static_cast<const Grid&>(*this)(l)); 
 	// };
 
-	const auto& get_coord_from_index(size_type idx) const {
+	const auto& get_coord_from_index(size_type idx) const 
+	{
 		return map_idx_to_coord_.at(idx);
 	}
  
-	size_type get_index_from_coord(const ArrayCoord& coord) const {
-		return flatten(
-			coord.begin(), coord.end(), std::index_sequence<DIMS...>{});
+	size_type get_index_from_coord(const ArrayCoord& coord) const 
+	{
+		return flatten(coord.begin(), coord.end(), std::index_sequence<DIMS...>{});
 	}
  
 private:
-	auto fill_map_idx_to_coord() const {
+	auto fill_map_idx_to_coord() const 
+	{
 		MapIndexToCoord coord;
 		std::array<size_t,num_dims> size_per_dim{{DIMS...}};
 		for (size_t j = 0; j < meta_prod(DIMS...); j ++) {
@@ -136,7 +173,8 @@ private:
 	}
 
 	// for debugging/illustration purpose following ostream operator might be removed in the future
-	friend auto& operator<<(std::ostream &os, const Grid& other) {
+	friend auto& operator<<(std::ostream &os, const Grid& other) 
+	{
 		os << "Values : {";
 		for (auto&& v : other.values_)  { os << v << ";"; }
 		os << "\b}\nMapping index to coord :\n";
