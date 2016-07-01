@@ -14,13 +14,12 @@ substantial portions of the Software.
 
 #ifndef MULTIDIM_GRID_HPP_
 #define MULTIDIM_GRID_HPP_
-
-#pragma once
  
 #include <ostream>
 #include <array>
 #include <type_traits>
-#include <utility> // std::index_sequence
+#include <utility>
+#include <iterator>
 
 namespace multidim 
 {
@@ -38,6 +37,18 @@ constexpr T meta_prod(T x, Ts... xs) { return x * meta_prod(xs...); }
 
 template<typename Iter, size_t D0, size_t... DIMS> struct flatten_t;
 
+template <typename Iter, size_t D0>
+constexpr size_t flatten(Iter first, std::index_sequence<D0> seq) 
+{
+	return flatten_t<Iter, D0>::compute(first, seq);
+}
+
+template <typename Iter, size_t D0, size_t... DIMS>
+constexpr size_t flatten(Iter first, Iter last, std::index_sequence<D0, DIMS...> seq) 
+{
+	return flatten_t<Iter, D0, DIMS...>::compute(first, last, seq);
+}
+
 template<typename Iter, size_t D0>
 struct flatten_t<Iter, D0>
 {
@@ -46,22 +57,6 @@ struct flatten_t<Iter, D0>
 		return *first;
 	}
 };
-
-
-template <typename Iter, size_t D0>
-constexpr size_t flatten(Iter first, std::index_sequence<D0> seq) 
-{
-	return flatten_t<Iter, D0>::compute(first, seq);
-}
-
-
-template <typename Iter, size_t D0, size_t... DIMS>
-constexpr size_t flatten(Iter first, Iter last, std::index_sequence<D0, DIMS...> seq) 
-{
-	return flatten_t<Iter, D0, DIMS...>::compute(first, last, seq);
-}
-
-
 
 template <typename Iter, size_t D0, size_t... DIMS>
 struct flatten_t
@@ -73,12 +68,30 @@ struct flatten_t
 	}
 };
 
+template<typename T, size_t... DIMS>
+constexpr auto unflatten(size_t idx) -> std::array<size_t, sizeof...(DIMS)>
+{
+	const size_t num_dims = sizeof...(DIMS);
+	auto size_per_dim = std::array<size_t, num_dims>{{DIMS...}};
+	auto coord = std::array<size_t, num_dims>{};
+
+	size_t b = meta_prod(DIMS...);
+	size_t r = 0;
+	for(size_t i = 0; i <= num_dims - 2; i ++) {
+		b /= size_per_dim[num_dims - i - 1];
+		coord[num_dims-i-1] = idx / b;
+		r = idx % b;
+		idx = r;
+	}
+	coord[0] = r;
+
+	return coord;
+}
 
 
 template<typename T, size_t... DIMS>
 class Grid 
 {
-
 public:
 	static constexpr size_t num_dims = sizeof...(DIMS);
 	static_assert(num_dims > 0, "Grid dimension needs to be > 0");
@@ -98,8 +111,9 @@ public:
  
 	Grid() : Grid(ArrayValues{}) {} // default constructor use delegating constructor
 	Grid(const ArrayValues& values) 
-		: map_idx_to_coord_(fill_map_idx_to_coord())
-		, values_(values)
+		: 
+		// map_idx_to_coord_(fill_map_idx_to_coord())
+		values_(values)
 		{}
  
 	Grid(const Grid&) = default;
@@ -114,7 +128,7 @@ public:
 	size_type size() { return prod_dims; }
 	size_type max_size() { return values_.max_size(); }
 
-	void swap(const Grid& other) noexcept { using std::swap; swap(other.map_idx_to_coord_); swap(other.values_); }
+	void swap(const Grid& other) noexcept { using std::swap; /* swap(other.map_idx_to_coord_); */ swap(other.values_); }
 
 	iterator       begin()        { return values_.begin();  }
 	const_iterator begin()  const { return values_.begin();  }
@@ -144,53 +158,65 @@ public:
 	// 	return const_cast<reference>(static_cast<const Grid&>(*this)(l)); 
 	// };
 
-	const auto& get_coord_from_index(size_type idx) const 
+	constexpr auto get_coord_from_index(size_type idx) const -> std::array<size_t, sizeof...(DIMS)>
 	{
-		return map_idx_to_coord_.at(idx);
+		// return map_idx_to_coord_.at(idx);
+		return unflatten<T,DIMS...>(idx);
 	}
  
-	size_type get_index_from_coord(const ArrayCoord& coord) const 
+	constexpr size_type get_index_from_coord(const ArrayCoord& coord) const 
 	{
 		return flatten(coord.begin(), coord.end(), std::index_sequence<DIMS...>{});
 	}
  
 private:
-	auto fill_map_idx_to_coord() const 
-	{
-		MapIndexToCoord coord;
-		std::array<size_t,num_dims> size_per_dim{{DIMS...}};
-		for (size_t j = 0; j < meta_prod(DIMS...); j ++) {
-			size_t a = j, b = meta_prod(DIMS...), r = 0;
-			for(size_t i = 0; i <= num_dims - 2; i ++) {
-				b /= size_per_dim[num_dims - i - 1];
-				coord[j][num_dims-i-1] = a / b;
-				r = a % b;
-				a = r;
-			}
-			coord[j][0] = r;
-		}
-		return coord;
-	}
+	// auto fill_map_idx_to_coord() const 
+	// {
+	// 	MapIndexToCoord coord;
+	// 	std::array<size_t,num_dims> size_per_dim{{DIMS...}};
+	// 	for (size_t j = 0; j < meta_prod(DIMS...); j ++) {
+	// 		size_t a = j, b = meta_prod(DIMS...), r = 0;
+	// 		for(size_t i = 0; i <= num_dims - 2; i ++) {
+	// 			b /= size_per_dim[num_dims - i - 1];
+	// 			coord[j][num_dims-i-1] = a / b;
+	// 			r = a % b;
+	// 			a = r;
+	// 		}
+	// 		coord[j][0] = r;
+	// 	}
+	// 	return coord;
+	// }
 
 	// for debugging/illustration purpose following ostream operator might be removed in the future
-	friend auto& operator<<(std::ostream &os, const Grid& other) 
+	friend auto& operator<<(std::ostream &os, const Grid& rhs) 
 	{
-		os << "Values : {";
-		for (auto&& v : other.values_)  { os << v << ";"; }
-		os << "\b}\nMapping index to coord :\n";
-		static size_t count{0};
-		for (auto&& m : other.map_idx_to_coord_) { 
-			os << count ++ << ":{";
-			for (auto&& el : m) {
-				os << el << ";";
-			}
-			os << "} "; 
+		os << "Values : [ ";
+		// for (auto&& v : rhs.values_)  { os << v << ";"; }
+		std::copy(rhs.values_.begin(), rhs.values_.end(), 
+			std::ostream_iterator<typename Grid::value_type>(os, " "));
+
+		os << "]\nMapping index to coord :\n";
+		// static size_t count{0};
+		// for (auto&& m : rhs.map_idx_to_coord_) { 
+		// 	os << count ++ << ":{";
+		// 	for (auto&& el : m) {
+		// 		os << el << ";";
+		// 	}
+		// 	os << "} "; 
+		// }
+		for(size_t idx = 0; idx < rhs.prod_dims; idx ++) {
+			os << idx << ":{";
+			auto coord = rhs.get_coord_from_index(idx);
+			std::copy(coord.begin(), coord.end(), 
+				std::ostream_iterator<typename ArrayCoord::value_type>(os, ","));
+			os << "} ";
 		}
+
 		return os << "\n";
 	}
  
 private:
-	MapIndexToCoord map_idx_to_coord_;    // O(1) access flat index -> dim coordinates
+	// MapIndexToCoord map_idx_to_coord_;    // O(1) access flat index -> dim coordinates
 	ArrayValues     values_;              // same behaviour as declaring  `float values_[meta_prod(DIMS)];`
 };
 
