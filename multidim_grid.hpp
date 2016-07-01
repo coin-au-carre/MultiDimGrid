@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2015 Florian Dang
+Copyright (c) 2015, 2016 Florian Dang
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this 
 software and associated documentation files (the "Software"), to deal in the Software 
@@ -69,18 +69,24 @@ struct flatten_t
 };
 
 template<typename T, size_t... DIMS>
+constexpr size_t flatten_to_index(const std::array<size_t, sizeof...(DIMS)>& coord) 
+{
+	return flatten(coord.cbegin(), coord.cend(), std::index_sequence<DIMS...>{});
+}
+
+template<typename T, size_t... DIMS>
 constexpr auto unflatten(size_t idx) -> std::array<size_t, sizeof...(DIMS)>
 {
 	const size_t num_dims = sizeof...(DIMS);
 	auto size_per_dim = std::array<size_t, num_dims>{{DIMS...}};
 	auto coord = std::array<size_t, num_dims>{};
 
-	size_t b = meta_prod(DIMS...);
+	size_t prod_dims = meta_prod(DIMS...);
 	size_t r = 0;
 	for(size_t i = 0; i <= num_dims - 2; i ++) {
-		b /= size_per_dim[num_dims - i - 1];
-		coord[num_dims-i-1] = idx / b;
-		r = idx % b;
+		prod_dims /= size_per_dim[num_dims - i - 1];
+		coord[num_dims-i-1] = idx / prod_dims;
+		r = idx % prod_dims;
 		idx = r;
 	}
 	coord[0] = r;
@@ -94,12 +100,12 @@ class Grid
 {
 public:
 	static constexpr size_t num_dims = sizeof...(DIMS);
-	static_assert(num_dims > 0, "Grid dimension needs to be > 0");
 	static constexpr size_t prod_dims = meta_prod(DIMS...);
+	static_assert(num_dims  > 0, "Grid dimension needs to be > 0");
+	static_assert(prod_dims > 0, "All dimension size must be > 0");
  
 	using ArrayValues     = std::array<T,prod_dims>;
 	using ArrayCoord      = std::array<size_t,num_dims>;
-	using MapIndexToCoord = std::array<ArrayCoord,prod_dims>;
  
 	using value_type       = typename ArrayValues::value_type;      // T
 	using reference        = typename ArrayValues::reference;       // T&
@@ -128,7 +134,7 @@ public:
 	size_type size() { return prod_dims; }
 	size_type max_size() { return values_.max_size(); }
 
-	void swap(const Grid& other) noexcept { using std::swap; /* swap(other.map_idx_to_coord_); */ swap(other.values_); }
+	void swap(const Grid& other) noexcept { values_.swap(other.values_); }
 
 	iterator       begin()        { return values_.begin();  }
 	const_iterator begin()  const { return values_.begin();  }
@@ -142,12 +148,12 @@ public:
  
 	reference operator[] (const ArrayCoord& coord) 
 	{ 
-		return values_[flatten(
-			coord.begin(), coord.end(), std::index_sequence<DIMS...>{})];
+		return values_[flatten_to_index<T,DIMS...>(coord)];
 	}
+
 	const_reference operator[] (const ArrayCoord& coord) const 
 	{ 
-		return const_cast<reference>(static_cast<const Grid&>(*this)[coord]); 
+		return values_[flatten_to_index<T,DIMS...>(coord)];
 	};
 
 	// reference operator()(std::initializer_list<size_type> l) {
@@ -158,9 +164,8 @@ public:
 	// 	return const_cast<reference>(static_cast<const Grid&>(*this)(l)); 
 	// };
 
-	constexpr auto get_coord_from_index(size_type idx) const -> std::array<size_t, sizeof...(DIMS)>
+	constexpr auto get_coord_from_index(size_type idx) const -> ArrayCoord
 	{
-		// return map_idx_to_coord_.at(idx);
 		return unflatten<T,DIMS...>(idx);
 	}
  
@@ -170,40 +175,14 @@ public:
 	}
  
 private:
-	// auto fill_map_idx_to_coord() const 
-	// {
-	// 	MapIndexToCoord coord;
-	// 	std::array<size_t,num_dims> size_per_dim{{DIMS...}};
-	// 	for (size_t j = 0; j < meta_prod(DIMS...); j ++) {
-	// 		size_t a = j, b = meta_prod(DIMS...), r = 0;
-	// 		for(size_t i = 0; i <= num_dims - 2; i ++) {
-	// 			b /= size_per_dim[num_dims - i - 1];
-	// 			coord[j][num_dims-i-1] = a / b;
-	// 			r = a % b;
-	// 			a = r;
-	// 		}
-	// 		coord[j][0] = r;
-	// 	}
-	// 	return coord;
-	// }
-
 	// for debugging/illustration purpose following ostream operator might be removed in the future
 	friend auto& operator<<(std::ostream &os, const Grid& rhs) 
 	{
 		os << "Values : [ ";
-		// for (auto&& v : rhs.values_)  { os << v << ";"; }
 		std::copy(rhs.values_.begin(), rhs.values_.end(), 
 			std::ostream_iterator<typename Grid::value_type>(os, " "));
 
 		os << "]\nMapping index to coord :\n";
-		// static size_t count{0};
-		// for (auto&& m : rhs.map_idx_to_coord_) { 
-		// 	os << count ++ << ":{";
-		// 	for (auto&& el : m) {
-		// 		os << el << ";";
-		// 	}
-		// 	os << "} "; 
-		// }
 		for(size_t idx = 0; idx < rhs.prod_dims; idx ++) {
 			os << idx << ":{";
 			auto coord = rhs.get_coord_from_index(idx);
@@ -216,13 +195,14 @@ private:
 	}
  
 private:
-	// MapIndexToCoord map_idx_to_coord_;    // O(1) access flat index -> dim coordinates
 	ArrayValues     values_;              // same behaviour as declaring  `float values_[meta_prod(DIMS)];`
 };
 
 } // namespace _impl_multi_grid
 
 using _impl_multi_grid::Grid;
+using _impl_multi_grid::flatten_to_index;
+using _impl_multi_grid::unflatten;
 
 } // namespace multidim
 

@@ -15,6 +15,11 @@ int main() {
 	std::cout << grid << std::endl;
 
 	// We can access efficiently to values from appropriate coordinates
-	std::cout << "Grid[{{2,0,2}}] = " << grid[{{2,0,2}}] << std::endl;
+	std::cout << "grid[{{2,0,2}}] = " << grid[{{2,0,2}}] << std::endl;
+
+    std::cout << grid.get_index_from_coord({{2,0,2}}) << std::endl;
+
+    // constexpr std::array<size_t,3>  coord = {{2,0,2}};
+    // static_assert(multidim::flatten_to_index<float,4,2,3>(coord) == 14, "Should be evaluated at compile time !");
 }
 
