@@ -1,6 +1,6 @@
 # MultiDim Grid
 
-A (future) efficient C++14 flatten multi dimensional container.
+A (future) efficient C++17 flatten multi dimensional container.  
 
 ## Disclaimer
 
