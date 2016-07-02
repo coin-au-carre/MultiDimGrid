@@ -25,5 +25,7 @@ int main() {
 
     constexpr auto coord = multidim::unflatten<float,4,2,3>(14);
     std::cout << coord[0] << coord[1] << coord[2] << '\n';
+
+    std::cout << grid.get_index_from_coord(coord);
 }
 

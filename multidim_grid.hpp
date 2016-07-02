@@ -20,6 +20,7 @@ substantial portions of the Software.
 #include <utility>
 #include <iterator>
 
+#include <iostream>
 
 #define MULTIDIM_GRID_CUSTOM_ARRAY
 
@@ -113,8 +114,11 @@ constexpr ForwardIt next(
 #else
 
 #include <array>
-using array = std::array; // C++17
-using next = std::next;  // C++17
+
+template<typename T, size_t N>
+using array = std::array<T,N>; // waiting C++17
+
+using std::next; // waiting C++17
 
 #endif
 
@@ -282,6 +286,7 @@ private:
             auto coord = rhs.get_coord_from_index(idx);
             std::copy(coord.begin(), coord.end(), 
                 std::ostream_iterator<typename ArrayCoord::value_type>(os, ","));
+            os << ":" << rhs.get_index_from_coord(coord);
             os << "} ";
         }
 
