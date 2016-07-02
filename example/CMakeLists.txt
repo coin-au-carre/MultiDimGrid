@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8)
 
 project(example)
 
-set(CXX_DEFAULT_FLAGS "-Wall -Wextra -Weffc++ -pedantic -std=c++17")
+set(CXX_DEFAULT_FLAGS "-Wall -Wextra -Weffc++ -pedantic")
 
 if(CMAKE_COMPILER_IS_GNUCXX)                          # using GCC
 	set(OPTIMIZE_FLAGS "-march=native")
@@ -37,5 +37,5 @@ endforeach()
 
 
 ## C++14 is needed
-# set_property(TARGET ${EXE_FILES} PROPERTY CXX_STANDARD 14)
-# set_property(TARGET ${EXE_FILES} PROPERTY CXX_STANDARD_REQUIRED ON)
+set_property(TARGET ${EXE_FILES} PROPERTY CXX_STANDARD 14)
+set_property(TARGET ${EXE_FILES} PROPERTY CXX_STANDARD_REQUIRED ON)

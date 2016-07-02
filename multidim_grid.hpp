@@ -55,6 +55,12 @@ public:
     constexpr reference       operator[](size_type pos)       { return data_[pos]; }
     constexpr const_reference operator[](size_type pos) const { return data_[pos]; }
 
+    void swap( array& other ) noexcept
+    {
+        using std::swap;
+        swap(data_, other.data_);
+    }
+
     bool operator==(const array& rhs) 
     {
         return data_ == rhs.data_;
@@ -138,13 +144,13 @@ constexpr T meta_prod(T x, Ts... xs) { return x * meta_prod(xs...); }
 template<typename Iter, size_t D0, size_t... DIMS> struct flatten_t;
 
 template <typename Iter, size_t D0>
-constexpr size_t flatten(Iter first, std::index_sequence<D0> seq) 
+constexpr size_t meta_flatten(Iter first, std::index_sequence<D0> seq) 
 {
     return flatten_t<Iter, D0>::compute(first, seq);
 }
 
 template <typename Iter, size_t D0, size_t... DIMS>
-constexpr size_t flatten(Iter first, Iter last, std::index_sequence<D0, DIMS...> seq) 
+constexpr size_t meta_flatten(Iter first, Iter last, std::index_sequence<D0, DIMS...> seq) 
 {
     return flatten_t<Iter, D0, DIMS...>::compute(first, last, seq);
 }
@@ -164,7 +170,7 @@ struct flatten_t
     static constexpr size_t compute(Iter first, Iter last, std::index_sequence<D0, DIMS...>) 
     {
         return *first * meta_prod(DIMS...) + 
-            flatten(next(first), last, std::index_sequence<DIMS...>{} );
+            meta_flatten(next(first), last, std::index_sequence<DIMS...>{} );
     }
 };
 
@@ -172,11 +178,11 @@ template<typename T, size_t... DIMS>
 constexpr size_t flatten_to_index(const array<size_t, sizeof...(DIMS)>& coord) 
 {
     // The problem here is that begin and end are constexpr since C++17 only...
-    return flatten(coord.cbegin(), coord.cend(), std::index_sequence<DIMS...>{});
+    return meta_flatten(coord.cbegin(), coord.cend(), std::index_sequence<DIMS...>{});
 }
 
 template<typename T, size_t... DIMS>
-constexpr auto unflatten(size_t idx) -> array<size_t, sizeof...(DIMS)>
+constexpr auto unflatten_to_coordinates(size_t idx) -> array<size_t, sizeof...(DIMS)>
 {
     const size_t num_dims = sizeof...(DIMS);
     constexpr auto size_per_dim = array<size_t, num_dims>{{DIMS...}};
@@ -185,13 +191,16 @@ constexpr auto unflatten(size_t idx) -> array<size_t, sizeof...(DIMS)>
     size_t prod_dims = meta_prod(DIMS...);
     size_t r = 0;
     for(size_t i = 0; i <= num_dims - 2; i ++) {
-        prod_dims /= size_per_dim[num_dims - i - 1];
-        coord[num_dims-i-1] = idx / prod_dims;
+        // prod_dims /= size_per_dim[num_dims - i - 1];
+        // coord[num_dims-i-1] = idx / prod_dims;
+        prod_dims /= size_per_dim[i];
+        coord[i] = idx / prod_dims;
+
         r = idx % prod_dims;
         idx = r;
     }
-    coord[0] = r;
-
+    // coord[0] = r;
+    coord[num_dims - 1] = r;
     return coord;
 }
 
@@ -262,14 +271,14 @@ public:
     //  return const_cast<reference>(static_cast<const Grid&>(*this)(l)); 
     // };
 
-    constexpr auto get_coord_from_index(size_type idx) const -> ArrayCoord
+    constexpr auto unflatten(size_type idx) const -> ArrayCoord
     {
-        return unflatten<T,DIMS...>(idx);
+        return unflatten_to_coordinates<T,DIMS...>(idx);
     }
  
-    constexpr size_type get_index_from_coord(const ArrayCoord& coord) const 
+    constexpr size_type flatten(const ArrayCoord& coord) const 
     {
-        return flatten(coord.begin(), coord.end(), std::index_sequence<DIMS...>{});
+        return flatten_to_index<T,DIMS...>(coord);
     }
  
 private:
@@ -283,14 +292,13 @@ private:
         os << "]\nMapping index to coord :\n";
         for(size_t idx = 0; idx < rhs.prod_dims; idx ++) {
             os << idx << ":{";
-            auto coord = rhs.get_coord_from_index(idx);
+            auto coord = rhs.unflatten(idx);
             std::copy(coord.begin(), coord.end(), 
                 std::ostream_iterator<typename ArrayCoord::value_type>(os, ","));
-            os << ":" << rhs.get_index_from_coord(coord);
-            os << "} ";
+            os << "}:" << rhs.flatten(coord) << ' ';
         }
 
-        return os << "\n";
+        return os;
     }
  
 private:
@@ -301,7 +309,7 @@ private:
 
 using _impl_multi_grid::Grid;
 using _impl_multi_grid::flatten_to_index;
-using _impl_multi_grid::unflatten;
+using _impl_multi_grid::unflatten_to_coordinates;
 
 } // namespace multidim
 

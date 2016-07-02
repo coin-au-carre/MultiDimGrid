@@ -11,14 +11,14 @@ int main() {
 	std::cout << grid << std::endl;
 
 	// get coordinates from index 43
-	auto coord = grid.get_coord_from_index(43);
-	std::cout << "get_coord_from_index(43) = {";
+	auto coord = grid.unflatten(43);
+	std::cout << "unflatten(43) = {";
 	for (auto el : coord) {
 		std::cout << el << ";";
 	}
 	std::cout << "}" << std::endl;
 	// and vice versa
-	std::cout << "get_index_from_coord({{2,0,2,3}}) = " << grid.get_index_from_coord({{2,0,2,3}}) << std::endl;
+	std::cout << "grid.flatten({{2,0,2,3}}) = " << grid.flatten({{2,0,2,3}}) << '\n';
 	// print value at specific coordinates
 	std::cout << "Grid[{2,0,2,3}] = " << grid[{{2,0,2,3}}] << std::endl;
 	// print value at specific index
@@ -27,6 +27,6 @@ int main() {
 	multidim::Grid<float, 2, 2> little_grid;
 	// std::cout << little_grid << std::endl;
 
-	std::cout << "sizeof(MultiGrid<5,int,2,2,2,2,2>) = " << sizeof(multidim::Grid<int,2,2,2,2,2>) << std::endl;
+	std::cout << "sizeof(MultiGrid<5,int,2,2,2,2,2>) = " << sizeof(multidim::Grid<int,2,2,2,2,2>) << '\n';
 }
 
