@@ -1,26 +1,32 @@
-/*
-Copyright (c) 2015, 2016 Florian Dang
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of this 
-software and associated documentation files (the "Software"), to deal in the Software 
-without restriction, including without limitation the rights to use, copy, modify, merge, 
-publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons 
-to whom the Software is furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all copies or 
-substantial portions of the Software.
-*/
-
-
 #ifndef MULTIDIM_GRID_HPP_
 #define MULTIDIM_GRID_HPP_
- 
+
+// The MIT License (MIT)
+// 
+// Copyright (c) 2015, 2016 Florian Dang
+// 
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+// 
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+// 
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
 #include <ostream>
 #include <type_traits>
 #include <utility>
 #include <iterator>
-
-#include <iostream>
 
 #define MULTIDIM_GRID_CUSTOM_ARRAY
 
@@ -121,10 +127,15 @@ constexpr ForwardIt next(
 
 #include <array>
 
+namespace multidim 
+{
+
 template<typename T, size_t N>
 using array = std::array<T,N>; // waiting C++17
 
 using std::next; // waiting C++17
+
+} // namespace multidim
 
 #endif
 
@@ -204,6 +215,16 @@ constexpr auto unflatten_to_coordinates(size_t idx) -> array<size_t, sizeof...(D
     return coord;
 }
 
+// template<size_t... DIMS>
+// struct DimensionArray
+// {
+//     static size_t data[sizeof...(DIMS)];
+// };
+
+// template<size_t ... DIMS>
+// size_t DimensionArray<DIMS...>::data[sizeof...(DIMS)] = {size_t(DIMS)...};
+
+
 
 template<typename T, size_t... DIMS>
 class Grid 
@@ -279,6 +300,39 @@ public:
     constexpr size_type flatten(const ArrayCoord& coord) const 
     {
         return flatten_to_index<T,DIMS...>(coord);
+    }
+
+    template<size_t Order = 1>
+    constexpr array<int,2*Order*num_dims> stencil(size_t idx) const 
+    {
+        size_t dimension_array[num_dims] = { size_t(DIMS)... };
+
+        auto stencil_indices = array<int,2*Order*num_dims>{};
+
+        
+        auto get_neighbor = [](size_t idx) 
+        { 
+            if (idx >= 0 and idx < prod_dims) 
+            {
+                return static_cast<int>(idx);
+            }
+            else
+            {
+                return -1;
+            }
+        };
+
+        size_t offset_dim = 1;
+        for (size_t d = 0; d < num_dims; d ++)
+        {
+            size_t left = idx - offset_dim;
+            size_t right = idx + offset_dim;
+            stencil_indices[d * num_dims] = get_neighbor(left);
+            stencil_indices[d * num_dims + 1] = get_neighbor(right);
+            offset_dim *= dimension_array[d];
+        }
+
+        return stencil_indices;
     }
  
 private:

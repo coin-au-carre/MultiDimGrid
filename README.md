@@ -72,7 +72,7 @@ efficient and generic solutions to manage multi-dimensional arrays.
 
 ## Implementation details
 
-- Uses static storage with custome array for `constexpr` accessibility instead of `std::array` (waiting for C++17).
+- Uses static storage with a custom array for accessing `constexpr` possibilities instead of `std::array` (we have to wait C++17 for that).
 - Uses variadic template parameters for dimensions size
 - Uses compile-time computations with constexpr meta functions
 
@@ -83,6 +83,3 @@ This project idea comes from a need in HPC and computational science for a multi
 class. Discussions on stack exchange can be found [here](https://stackoverflow.com/questions/31449433/generic-c-multidimensional-iterators) and [here](https://codereview.stackexchange.com/questions/97260/generic-multi-dimension-grid-array-class-in-c). Thanks to Barry for some great insights !
 
 
-## License
-
-MultiDimGrid is licensed under the terms of the MIT license.

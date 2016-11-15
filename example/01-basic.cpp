@@ -28,5 +28,8 @@ int main() {
 	// std::cout << little_grid << std::endl;
 
 	std::cout << "sizeof(MultiGrid<5,int,2,2,2,2,2>) = " << sizeof(multidim::Grid<int,2,2,2,2,2>) << '\n';
+
+	auto neighbors = grid.stencil<1>(4);
+	for (auto n : neighbors) std::cout << n << " ";
 }
 

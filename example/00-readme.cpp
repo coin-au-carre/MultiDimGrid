@@ -26,5 +26,6 @@ int main()
 
     constexpr auto coord = grid.unflatten(14);
     std::cout << "grid.unflatten(14) = {" << coord[0] << "," << coord[1] << "," << coord[2] << "}\n";
+    static_assert(coord[0] == 2, "Should be evaluated at compile time !");
 }
 
